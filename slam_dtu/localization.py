@@ -25,10 +25,10 @@ class Localization(Node):
         self.P_km1_km1 = np.zeros((5, 5))
 
         # process noise covariance matrix
-        self.Q = 0.001 * np.eye(5)
+        self.Q = 1e-5 * np.eye(5)
 
         # measurement noise covariance matrix
-        self.R = 0.001 * np.eye(2)
+        self.R = 1e-5 * np.eye(2)
 
         # measurement matrix
         self.H = np.hstack((np.zeros((2, 3)), np.eye(2)))
@@ -47,11 +47,12 @@ class Localization(Node):
         """The state transition function."""
         dvx = x_km1_km1[3, 0] * np.cos(x_km1_km1[2, 0] + dt * x_km1_km1[4, 0] / 2) * dt
         dvy = x_km1_km1[3, 0] * np.sin(x_km1_km1[2, 0] + dt * x_km1_km1[4, 0] / 2) * dt
+        dom = x_km1_km1[4, 0] * dt
         return np.array(
             [
                 [x_km1_km1[0, 0] + dvx],
                 [x_km1_km1[1, 0] + dvy],
-                [x_km1_km1[2, 0] + x_km1_km1[4, 0] * dt],
+                [x_km1_km1[2, 0] + dom],
                 [x_km1_km1[3, 0]],
                 [x_km1_km1[4, 0]],
             ]
@@ -59,25 +60,24 @@ class Localization(Node):
 
     def F(self, x_km1_km1: np.ndarray, dt: float) -> np.ndarray:
         """The Jacobian of the state transition function."""
+        th = x_km1_km1[2, 0]
+        v = x_km1_km1[3, 0]
+        om = x_km1_km1[4, 0]
         return np.array(
             [
                 [
                     1,
                     0,
-                    -x_km1_km1[3, 0]
-                    * np.sin(x_km1_km1[2, 0] + dt * x_km1_km1[4, 0] / 2)
-                    * dt,
-                    0,
-                    0,
+                    -v * np.sin(th + dt * om / 2) * dt,
+                    np.cos(th + dt * om / 2) * dt,
+                    -v * np.sin(th + dt * om / 2) * dt**2 / 2,
                 ],
                 [
                     0,
                     1,
-                    x_km1_km1[3, 0]
-                    * np.cos(x_km1_km1[2, 0] + dt * x_km1_km1[4, 0] / 2)
-                    * dt,
-                    0,
-                    0,
+                    v * np.cos(th + dt * om / 2) * dt,
+                    np.sin(th + dt * om / 2) * dt,
+                    v * np.cos(th + dt * om / 2) * dt**2 / 2,
                 ],
                 [0, 0, 1, 0, dt],
                 [0, 0, 0, 1, 0],
