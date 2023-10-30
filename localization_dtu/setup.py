@@ -18,6 +18,9 @@ setup(
     license="MIT",
     tests_require=["pytest"],
     entry_points={
-        "console_scripts": ["localization = localization_dtu.localization:main"],
+        "console_scripts": [
+            "localization = localization_dtu.localization:main",
+            "odometry_translate = localization_dtu.odometry_translate:main",
+        ],
     },
 )
