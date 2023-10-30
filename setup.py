@@ -1,6 +1,6 @@
 from setuptools import find_packages, setup
 
-package_name = "slam_dtu"
+package_name = "localization_dtu"
 
 setup(
     name=package_name,
@@ -18,6 +18,6 @@ setup(
     license="MIT",
     tests_require=["pytest"],
     entry_points={
-        "console_scripts": ["localization = slam_dtu.localization:main"],
+        "console_scripts": ["localization = localization_dtu.localization:main"],
     },
 )

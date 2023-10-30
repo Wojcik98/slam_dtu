@@ -1,9 +1,9 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>slam_dtu</name>
+  <name>localization_dtu</name>
   <version>0.0.0</version>
-  <description>Package for the SLAM project at the DTU</description>
+  <description>Localization package for the SLAM project at the DTU</description>
   <maintainer email="wojcikmichal98@gmail.com">Michal Wojcik</maintainer>
   <license>MIT</license>
 
