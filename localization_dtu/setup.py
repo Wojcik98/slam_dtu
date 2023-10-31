@@ -21,6 +21,7 @@ setup(
         "console_scripts": [
             "localization = localization_dtu.localization:main",
             "odometry_translate = localization_dtu.odometry_translate:main",
+            "imu_odom = localization_dtu.imu_odom:main",
         ],
     },
 )

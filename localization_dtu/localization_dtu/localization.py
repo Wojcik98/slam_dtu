@@ -111,7 +111,6 @@ class Localization(Node):
         K = P_k_km1 @ self.H.T @ np.linalg.inv(S)
 
         x_k_k = x_k_km1 + K @ y
-        # self.get_logger().info(f"Eye shape: {(K @ self.H).shape}")
         P_k_k = (np.eye(5) - K @ self.H) @ P_k_km1
 
         self.publish(x_k_k, P_k_k, msg.header)
