@@ -22,6 +22,7 @@ setup(
             "localization = localization_dtu.localization:main",
             "odometry_translate = localization_dtu.odometry_translate:main",
             "imu_odom = localization_dtu.imu_odom:main",
+            "velocity_complementary_filter_node = localization_dtu.vel_comp_filter:main",
         ],
     },
 )
