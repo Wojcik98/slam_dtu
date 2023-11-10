@@ -48,14 +48,6 @@ class ImuOdometry(Node):
     def f(self, x_km1_km1: np.ndarray, dt: float) -> np.ndarray:
         """The state transition function."""
         x, y, th, vx, vy, omz, ax, ay = x_km1_km1[:, 0]
-        # x = x_km1_km1[0, 0]
-        # y = x_km1_km1[1, 0]
-        # th = x_km1_km1[2, 0]
-        # vx = x_km1_km1[3, 0]
-        # vy = x_km1_km1[4, 0]
-        # omz = x_km1_km1[5, 0]
-        # ax = x_km1_km1[6, 0]
-        # ay = x_km1_km1[7, 0]
 
         dvx = ax * dt
         dvy = ay * dt
@@ -123,12 +115,12 @@ class ImuOdometry(Node):
             [
                 [1, 0, dx_dth, dx_dvx, dx_dvy, dx_domz, dx_dax, dx_day],
                 [0, 1, dy_dth, dy_dvx, dy_dvy, dy_domz, dy_dax, dy_day],
-                [0, 0, 1, 0, 0, dt, 0, 0],  # git
-                [0, 0, 0, 1, 0, 0, dt, 0],  # git
-                [0, 0, 0, 0, 1, 0, 0, dt],  # git
-                [0, 0, 0, 0, 0, 1, 0, 0],  # git
-                [0, 0, 0, 0, 0, 0, 1, 0],  # git
-                [0, 0, 0, 0, 0, 0, 0, 1],  # git
+                [0, 0, 1, 0, 0, dt, 0, 0],
+                [0, 0, 0, 1, 0, 0, dt, 0],
+                [0, 0, 0, 0, 1, 0, 0, dt],
+                [0, 0, 0, 0, 0, 1, 0, 0],
+                [0, 0, 0, 0, 0, 0, 1, 0],
+                [0, 0, 0, 0, 0, 0, 0, 1],
             ]
         )
 
