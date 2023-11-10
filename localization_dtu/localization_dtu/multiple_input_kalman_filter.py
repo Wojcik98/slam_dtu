@@ -18,6 +18,9 @@ from scipy.spatial.transform import Rotation
 from std_msgs.msg import Header
 
 
+# ros2 run localization_dtu mikf_node vo_odom:=/rtabmap/odom wheel_odom:=/model/rover/odometry output:=/mikf_odom
+
+
 class MultipleInputKalmanFilter(Node):
     """Extended Kalman filter combining two velocity measurements."""
 
