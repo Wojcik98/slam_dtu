@@ -1,3 +1,5 @@
+import ctypes
+import struct
 import time
 from typing import Optional
 
@@ -82,6 +84,7 @@ class GlobalLocalization(Node):
             return
 
         start = time.time()
+        abs_start = start
 
         try:
             rgbd_to_base_link = self.get_transform_matrix(
@@ -94,35 +97,112 @@ class GlobalLocalization(Node):
             )
             return
 
+        self.get_logger().info(
+            f"    getting transform took {time.time() - start:.3f} seconds"
+        )
+        start = time.time()
+
         # convert pointcloud message to numpy open3d pointcloud
         raw_data = read_points(
-            self.latest_pcd_msg, skip_nans=True, field_names=("x", "y", "z")
-        )  # 1D (n, ) np.array holding tuples of (x, y, z)
+            self.latest_pcd_msg, skip_nans=True, field_names=("x", "y", "z", "rgb")
+        )  # 1D (n, ) np.array holding tuples of (x, y, z, rgb)
         points = np.array(
             list(np.array(list(point)) for point in raw_data)
         )  # 2D (n, 3) np.array holding [x, y, z] in each row
+        # points, colors = self.get_points_and_colors(self.latest_pcd_msg)
+
+        self.get_logger().info(
+            f"    reading pointcloud took {time.time() - start:.3f} seconds"
+        )
+        start = time.time()
 
         # transform pointcloud to base_link frame
         points = np.hstack((points, np.ones((points.shape[0], 1))))
         points = rgbd_to_base_link @ points.T
         points = points[:3, :].T
 
+        self.get_logger().info(
+            f"    transforming pointcloud took {time.time() - start:.3f} seconds"
+        )
+        start = time.time()
+
         self.rgbd.points = o3d.utility.Vector3dVector(points)
-        self.rgbd.estimate_normals()
+        # self.rgbd.colors = o3d.utility.Vector3dVector(colors)
+
+        self.get_logger().info(
+            f"    constructing took {time.time() - start:.3f} seconds"
+        )
+        start = time.time()
+
+        # downsample rgbd
+        rgbd = self.rgbd.voxel_down_sample(voxel_size=0.05)
+
+        self.get_logger().info(
+            f"    downsampling took {time.time() - start:.3f} seconds"
+        )
+        start = time.time()
+
+        rgbd.estimate_normals()
+
+        self.get_logger().info(
+            f"    estimating normals took {time.time() - start:.3f} seconds"
+        )
+        start = time.time()
+
+        # self.rgbd.transform(rgbd_to_base_link)
+        # self.get_logger().info(
+        #     f"    transforming pointcloud took {time.time() - start:.3f} seconds"
+        # )
+        # start = time.time()
 
         # initial guess
         T_init = np.eye(4)
         T_init[:3, :3] = Rotation.from_euler("z", self.pose_estimate[2, 0]).as_matrix()
         T_init[:2, 3] = self.pose_estimate[:2, 0]
 
+        # crop map to square around initial guess
+        # square_size = 100.0
+        # map = self.map.crop(
+        #     o3d.geometry.AxisAlignedBoundingBox(
+        #         min_bound=(
+        #             self.pose_estimate[0, 0] - square_size / 2,
+        #             self.pose_estimate[1, 0] - square_size / 2,
+        #             -np.inf,
+        #         ),
+        #         max_bound=(
+        #             self.pose_estimate[0, 0] + square_size / 2,
+        #             self.pose_estimate[1, 0] + square_size / 2,
+        #             np.inf,
+        #         ),
+        #     )
+        # )
+        map = self.map
+
+        self.get_logger().info(f"    cropping took {time.time() - start:.3f} seconds")
+        start = time.time()
+
         # registration
         reg = o3d.pipelines.registration.registration_icp(
-            self.rgbd,
-            self.map,
-            max_correspondence_distance=0.3,
+            rgbd,
+            map,
+            max_correspondence_distance=0.5,
             init=T_init,
             estimation_method=o3d.pipelines.registration.TransformationEstimationPointToPlane(),
+            # estimation_method=o3d.pipelines.registration.TransformationEstimationPointToPoint(),
+            criteria=o3d.pipelines.registration.ICPConvergenceCriteria(
+                max_iteration=10
+            ),
         )
+        # reg = o3d.pipelines.registration.registration_colored_icp(
+        #     rgbd,
+        #     map,
+        #     max_correspondence_distance=0.5,
+        #     init=T_init,
+        #     estimation_method=o3d.pipelines.registration.TransformationEstimationForColoredICP(),
+        #     criteria=o3d.pipelines.registration.ICPConvergenceCriteria(
+        #         max_iteration=10
+        #     ),
+        # )
 
         if self.visualize:
             self.rgbd.transform(reg.transformation)
@@ -136,11 +216,38 @@ class GlobalLocalization(Node):
         # self.get_logger().info(f"Initial guess:\n{T_init}")
         # self.get_logger().info(f"Transformation:\n{reg.transformation}")
 
+        self.get_logger().info(
+            f"    registration took {time.time() - start:.3f} seconds"
+        )
+        start = time.time()
+
         self.publish(reg.transformation)
 
-        stop = time.time()
-        elapsed = stop - start
-        self.get_logger().info(f"Registration time: {elapsed} seconds")
+        self.get_logger().info(f"    publishing took {time.time() - start:.3f} seconds")
+
+        self.get_logger().info(f"Total time: {time.time() - abs_start:.3f} seconds")
+
+        # stop = time.time()
+        # elapsed = stop - start
+
+    # def get_points_and_colors(self, msg: PointCloud2) -> tuple[np.ndarray, np.ndarray]:
+    #     """Convert a pointcloud message to numpy arrays of points and colors."""
+    #     raw_data = read_points(msg, skip_nans=True, field_names=("x", "y", "z", "rgb"))
+    #     points = np.array(list(np.array(list(point)) for point in raw_data))
+    #     colors_raw = points[:, 3].squeeze()
+    #     points = points[:, :3]
+    #     colors = np.zeros((colors_raw.shape[0], 3))
+
+    #     for i in range(colors_raw.shape[0]):  # TODO optimize
+    #         s = struct.pack(">f", colors_raw[i])
+    #         gle = struct.unpack(">l", s)[0]
+    #         rgb = ctypes.c_uint32(gle).value
+    #         r = (rgb & 0x00FF0000) >> 16
+    #         g = (rgb & 0x0000FF00) >> 8
+    #         b = rgb & 0x000000FF
+    #         colors[i, :] = np.array([r, g, b]) / 255.0
+
+    #     return points, colors
 
     def publish(self, transformation: np.ndarray) -> None:
         header = Header()
