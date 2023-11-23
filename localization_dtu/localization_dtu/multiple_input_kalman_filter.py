@@ -60,7 +60,7 @@ class MultipleInputKalmanFilter(Node):
 
         # buffer
         self.kalman_buffer: list[KalmanBufferRecord] = []
-        self.kalman_buffer_time = Duration(seconds=10.0)
+        self.kalman_buffer_time = Duration(seconds=20.0)
 
         # initialize subscribers
         self.vo_sub = self.create_subscription(
@@ -180,11 +180,20 @@ class MultipleInputKalmanFilter(Node):
         time = Time(seconds=msg.header.stamp.sec, nanoseconds=msg.header.stamp.nanosec)
         # dt = (time - last_time).nanoseconds * 1e-9
 
+        # read covariance
+        pose3d_covariance = np.array(msg.pose.covariance).reshape((6, 6))
+        pose_covariance = np.zeros((3, 3))
+        pose_covariance[:2, :2] = pose3d_covariance[:2, :2]
+        pose_covariance[2, 2] = pose3d_covariance[5, 5]
+
+        # print covariance
+        self.get_logger().info(f"pose_covariance: {pose_covariance}")
+
         record = KalmanBufferRecord(
             buffer[0].x_km1_km1,
             buffer[0].P_km1_km1,
             self.Q,
-            self.R_pose,
+            pose_covariance,
             self.H_pose,
             pose,
             last_time,
